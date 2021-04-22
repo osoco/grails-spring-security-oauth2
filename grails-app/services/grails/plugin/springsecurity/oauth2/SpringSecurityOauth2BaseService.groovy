@@ -14,7 +14,7 @@
  */
 package grails.plugin.springsecurity.oauth2
 
-import com.github.scribejava.core.model.OAuth2AccessToken
+import com.github.scribejava.core.model.Token
 import grails.plugin.springsecurity.SpringSecurityUtils
 import grails.plugin.springsecurity.oauth2.exception.OAuth2Exception
 import grails.plugin.springsecurity.oauth2.service.OAuth2AbstractProviderService
@@ -42,9 +42,9 @@ class SpringSecurityOauth2BaseService {
     def grailsApplication
     AuthenticationManager authenticationManager
 
-    OAuth2SpringToken createAuthToken(String providerName, OAuth2AccessToken scribeToken) {
+    OAuth2SpringToken createAuthToken(String providerName, Token accessToken) {
         def providerService = getProviderService(providerName)
-        OAuth2SpringToken oAuthToken = providerService.createSpringAuthToken(scribeToken)
+        OAuth2SpringToken oAuthToken = providerService.createSpringAuthToken(accessToken)
         Class<?> OAuthID = lookupOAuthIdClass()
         def oAuthID = OAuthID.findByProviderAndAccessToken(oAuthToken.providerName, oAuthToken.socialId)
         if (oAuthID) {
@@ -59,7 +59,7 @@ class SpringSecurityOauth2BaseService {
      */
     String getAuthorizationUrl(String providerName) {
         OAuth2AbstractProviderService providerService = getProviderService(providerName)
-        providerService.getAuthUrl(['scope': _providerConfigurationMap.get(providerName).scope])
+        providerService.getAuthUrl([:])
     }
 
     /**

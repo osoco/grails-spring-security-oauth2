@@ -14,7 +14,11 @@
  */
 package grails.plugin.springsecurity.oauth2
 
-import com.github.scribejava.core.model.OAuth2AccessToken
+import com.github.scribejava.core.model.Token
+import com.github.scribejava.core.model.OAuth1RequestToken
+import com.github.scribejava.core.oauth.OAuth10aService
+import com.github.scribejava.core.oauth.OAuth20Service
+
 import com.sun.istack.internal.Nullable
 import grails.plugin.springsecurity.SpringSecurityService
 import grails.plugin.springsecurity.SpringSecurityUtils
@@ -28,12 +32,15 @@ import org.grails.validation.routines.UrlValidator
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.web.servlet.ModelAndView
 
+import groovy.util.logging.Slf4j
+
 /**
  * Controller for handling OAuth authentication request and
  * integrating it into SpringSecurity
  *
  * Based on SpringSecurityOAuthController:2.1.0.RC4
  */
+@Slf4j
 @Secured('permitAll')
 class SpringSecurityOAuth2Controller {
 
@@ -64,8 +71,47 @@ class SpringSecurityOAuth2Controller {
      * Default callback function for first OAuth2 Step
      */
     def callback() {
+        Token accessToken
         String providerName = params.provider
-        log.debug("Callback for " + providerName)
+        log.debug("Callback for ${providerName} with params: ${params}")
+
+        def providerService = springSecurityOauth2BaseService.getProviderService(providerName)
+        def providerServiceVersion = providerService.authService.version
+        if (providerServiceVersion == OAuth10aService.VERSION) {
+            accessToken = callbackOAuth10(providerService, providerName, params)
+        } else if (providerServiceVersion == OAuth20Service.VERSION) {
+            accessToken = callbackOAuth20(providerService, providerName, params)
+        } else {
+            throw new OAuth2Exception("OAuth version ${providerServiceVersion} not supported")
+        }
+        session[springSecurityOauth2BaseService.sessionKeyForAccessToken(providerName)] = accessToken
+        redirect(uri: springSecurityOauth2BaseService.getSuccessUrl(providerName))
+    }
+
+    private Token callbackOAuth10(providerService, providerName, params) {
+        Token accessToken
+        // Check if we got an OAuthVerifier from the server query
+        String oAuthVerifier = params['oauth_verifier']
+        String oAuthToken = params['oauth_token']
+        log.debug("OAuthVerifier: " + oAuthVerifier)
+        if (!oAuthVerifier || oAuthVerifier.isEmpty()) {
+            throw new OAuth2Exception("No OAuthVerifier in callback for provider '${providerName}'")
+        }
+        try {
+            Token requestToken = new OAuth1RequestToken(oAuthToken, 'tokenSecret') //providerService.authService.getRequestToken()
+            log.debug "Request Token: ${requestToken} with token: ${requestToken.token} and tokenSecret: ${requestToken.tokenSecret}"
+            accessToken = providerService.getAccessToken(requestToken, oAuthVerifier)
+            accessToken
+        } catch (Exception exception) {
+            log.error("Could not authenticate with oAuth. " + ExceptionUtils.getMessage(exception), exception)
+            log.debug(ExceptionUtils.getStackTrace(exception))
+            redirect(uri: springSecurityOauth2BaseService.getFailureUrl(providerName))
+            return
+        }
+    }
+
+    private Token callbackOAuth20(providerService, providerName, params) {
+        Token accessToken
 
         // Check if we got an AuthCode from the server query
         String authCode = params.code
@@ -74,18 +120,15 @@ class SpringSecurityOAuth2Controller {
             throw new OAuth2Exception("No AuthCode in callback for provider '${providerName}'")
         }
 
-        def providerService = springSecurityOauth2BaseService.getProviderService(providerName)
-        OAuth2AccessToken accessToken
         try {
             accessToken = providerService.getAccessToken(authCode)
+            accessToken
         } catch (Exception exception) {
             log.error("Could not authenticate with oAuth2. " + ExceptionUtils.getMessage(exception), exception)
             log.debug(ExceptionUtils.getStackTrace(exception))
             redirect(uri: springSecurityOauth2BaseService.getFailureUrl(providerName))
             return
         }
-        session[springSecurityOauth2BaseService.sessionKeyForAccessToken(providerName)] = accessToken
-        redirect(uri: springSecurityOauth2BaseService.getSuccessUrl(providerName))
     }
 
     def onFailure(String provider) {

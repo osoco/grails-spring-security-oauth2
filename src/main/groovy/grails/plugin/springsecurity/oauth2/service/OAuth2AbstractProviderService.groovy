@@ -16,11 +16,14 @@ package grails.plugin.springsecurity.oauth2.service
 
 import com.github.scribejava.core.builder.ServiceBuilder
 import com.github.scribejava.core.builder.api.DefaultApi20
+import com.github.scribejava.core.model.OAuth1AccessToken
 import com.github.scribejava.core.model.OAuth2AccessToken
+import com.github.scribejava.core.model.Token
 import com.github.scribejava.core.model.OAuthRequest
 import com.github.scribejava.core.model.Response
+import com.github.scribejava.core.model.Token
 import com.github.scribejava.core.model.Verb
-import com.github.scribejava.core.oauth.OAuth20Service
+import com.github.scribejava.core.oauth.OAuthService
 import grails.plugin.springsecurity.oauth2.token.OAuth2SpringToken
 import grails.plugin.springsecurity.oauth2.util.OAuth2ProviderConfiguration
 
@@ -35,13 +38,13 @@ import grails.plugin.springsecurity.oauth2.util.OAuth2ProviderConfiguration
  */
 abstract class OAuth2AbstractProviderService implements OAuth2ProviderService {
 
-    private OAuth20Service _authService
+    private OAuthService _authService
 
     private OAuth2ProviderConfiguration _providerConfiguration
 
     /**
      * @return The ProviderID
-     */
+     */ 
     abstract String getProviderID()
 
     /**
@@ -70,7 +73,7 @@ abstract class OAuth2AbstractProviderService implements OAuth2ProviderService {
      * @param accessToken
      * @return
      */
-    abstract OAuth2SpringToken createSpringAuthToken(OAuth2AccessToken accessToken)
+    abstract OAuth2SpringToken createSpringAuthToken(Token accessToken)
 
     /**
      * Initialize the service with a configuration
@@ -91,6 +94,15 @@ abstract class OAuth2AbstractProviderService implements OAuth2ProviderService {
     }
 
     /**
+     * Get the access token from the oAuth2 Service
+     * @param authCode
+     * @return
+     */
+    OAuth1AccessToken getAccessToken(Token requestToken, String oAuthVerifier) {
+        authService.getAccessToken(requestToken, oAuthVerifier)
+    }
+
+    /**
      * Get the authorization URL
      * @param params Additional params for the url call
      * @return
@@ -104,18 +116,15 @@ abstract class OAuth2AbstractProviderService implements OAuth2ProviderService {
      * @param providerConfiguration
      * @return a scribejava service builder
      */
-    OAuth20Service buildScribeService(OAuth2ProviderConfiguration providerConfiguration) {
-        final String secretState = getProviderID() + "-secret-" + new Random().nextInt(999_999)
-        ServiceBuilder serviceBuilder = new ServiceBuilder()
-                .apiKey(providerConfiguration.apiKey)
+    OAuthService buildScribeService(OAuth2ProviderConfiguration providerConfiguration) {
+        ServiceBuilder serviceBuilder = new ServiceBuilder(providerConfiguration.apiKey)
                 .apiSecret(providerConfiguration.apiSecret)
-                .state(secretState)
         if (providerConfiguration.callbackUrl) {
             serviceBuilder.callback(providerConfiguration.callbackUrl)
         }
-//        if (providerConfiguration.scope) {
-//            serviceBuilder.scope(providerConfiguration.scope)
-//        }
+        if (providerConfiguration.scope) {
+            serviceBuilder.setScope(providerConfiguration.scope)
+        }
         if (providerConfiguration.debug) {
             serviceBuilder.debug()
         }
@@ -143,13 +152,13 @@ abstract class OAuth2AbstractProviderService implements OAuth2ProviderService {
      * @param accessToken
      * @return
      */
-    Response getResponse(OAuth2AccessToken accessToken) {
-        OAuthRequest oAuthRequest = new OAuthRequest(Verb.GET, getProfileScope(), authService)
+    Response getResponse(Token accessToken) {
+        OAuthRequest oAuthRequest = new OAuthRequest(Verb.GET, getProfileScope())
         authService.signRequest(accessToken, oAuthRequest);
-        oAuthRequest.send()
+        authService.execute(oAuthRequest)
     }
 
-    OAuth20Service getAuthService() {
+    OAuthService getAuthService() {
         return _authService
     }
 

@@ -12,7 +12,7 @@ buildscript {
     }
 }
 
-version "1.2.0.BUILD-SNAPSHOT"
+version "1.2.0-patch-scribejava-8.3.0"
 group = 'org.grails.plugins'
 
 //apply plugin:"eclipse"

@@ -14,6 +14,7 @@
  */
 package grails.plugin.springsecurity.oauth2.token
 
+import com.github.scribejava.core.model.Token
 import com.github.scribejava.core.model.OAuth2AccessToken
 import grails.converters.JSON
 import org.springframework.security.authentication.AbstractAuthenticationToken
@@ -35,7 +36,7 @@ abstract class OAuth2SpringToken extends AbstractAuthenticationToken {
 
     private static final long serialVersionUID = 1
 
-    protected OAuth2AccessToken accessToken
+    protected Token accessToken
     protected Map tokenParams
     protected Object principal
     Collection<GrantedAuthority> authorities
@@ -43,11 +44,18 @@ abstract class OAuth2SpringToken extends AbstractAuthenticationToken {
     /**
      * Initialises the token from an access token.
      */
-    OAuth2SpringToken(OAuth2AccessToken accessToken, boolean forceJsonExtractor = false) {
+    OAuth2SpringToken(Token accessToken, boolean forceJsonExtractor = false) {
         super(Collections.EMPTY_LIST)
         this.accessToken = accessToken
         this.tokenParams = extractParameters(accessToken.rawResponse,
             forceJsonExtractor ?: accessToken.rawResponse?.trim()?.startsWith('{'))
+    }
+
+    /**
+     * Initialises the token from an access token.
+     */
+    OAuth2SpringToken(OAuth2AccessToken accessToken, boolean forceJsonExtractor = false) {
+       this((Token)accessToken, forceJsonExtractor)
     }
 
     Object getPrincipal() {

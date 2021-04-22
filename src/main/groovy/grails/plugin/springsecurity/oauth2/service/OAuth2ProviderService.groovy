@@ -15,9 +15,11 @@
 package grails.plugin.springsecurity.oauth2.service
 
 import com.github.scribejava.core.builder.api.DefaultApi20
+import com.github.scribejava.core.model.Token
 import com.github.scribejava.core.model.OAuth2AccessToken
+
 import com.github.scribejava.core.model.Response
-import com.github.scribejava.core.oauth.OAuth20Service
+import com.github.scribejava.core.oauth.OAuthService
 import grails.plugin.springsecurity.oauth2.token.OAuth2SpringToken
 import grails.plugin.springsecurity.oauth2.util.OAuth2ProviderConfiguration
 
@@ -64,7 +66,7 @@ interface OAuth2ProviderService {
      * @param accessToken
      * @return
      */
-    OAuth2SpringToken createSpringAuthToken(OAuth2AccessToken accessToken)
+    OAuth2SpringToken createSpringAuthToken(Token accessToken)
 
     /**
      * Initialize the service with a configuration
@@ -90,7 +92,7 @@ interface OAuth2ProviderService {
      * Create the scribe service to make oAuthCalls with
      * @param providerConfiguration
      */
-    OAuth20Service buildScribeService(OAuth2ProviderConfiguration providerConfiguration)
+    OAuthService buildScribeService(OAuth2ProviderConfiguration providerConfiguration)
 
     /**
      * @return The configured successUrl
@@ -108,6 +110,6 @@ interface OAuth2ProviderService {
      * @param accessToken
      * @return
      */
-    Response getResponse(OAuth2AccessToken accessToken)
+    Response getResponse(Token accessToken)
 
 }
