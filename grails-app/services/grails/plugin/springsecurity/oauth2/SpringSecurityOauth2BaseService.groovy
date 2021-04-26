@@ -46,7 +46,7 @@ class SpringSecurityOauth2BaseService {
         def providerService = getProviderService(providerName)
         OAuth2SpringToken oAuthToken = providerService.createSpringAuthToken(accessToken)
         Class<?> OAuthID = lookupOAuthIdClass()
-        def oAuthID = OAuthID.findByProviderAndAccessToken(oAuthToken.providerName, oAuthToken.socialId)
+        def oAuthID = OAuthID.findByProviderAndEmail(oAuthToken.providerName, oAuthToken.socialId)
         if (oAuthID) {
             updateOAuthToken(oAuthToken, oAuthID.user)
         }
